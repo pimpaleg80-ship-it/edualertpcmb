@@ -35,7 +35,8 @@ data class SyncAuditLog(
     val summary: String,
     val latencyMs: Long,
     val httpStatusCode: Int = 200,
-    val payloadPreview: String
+    val payloadPreview: String,
+    val targetYear: Int = 2026
 )
 
 data class SyncState(
@@ -46,5 +47,6 @@ data class SyncState(
     val isAdaptive: Boolean = true,
     val registeredWebhooks: List<WebhookEndpoint> = emptyList(),
     val auditLogs: List<SyncAuditLog> = emptyList(),
-    val totalEventsDispatched: Int = 0
+    val totalEventsDispatched: Int = 0,
+    val syncTargetYear: Int = 2026
 )

@@ -85,5 +85,6 @@ data class ExamItem(
     val currentStatus: ExamStatus,
     val nextMilestoneTitle: String,
     val nextMilestoneTimestampMs: Long,
-    val isLateFeeApplicable: Boolean = false
+    val isLateFeeApplicable: Boolean = false,
+    val targetYear: Int = 2026
 )

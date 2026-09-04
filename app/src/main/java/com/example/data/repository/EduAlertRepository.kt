@@ -201,9 +201,11 @@ class EduAlertRepository(
     // Admin CMS Functionality: Modify exam details, deadlines, and eligibility criteria
     fun adminUpdateExamStatus(examId: String, newStatus: ExamStatus, newMilestone: String, remainingHours: Long) {
         var updatedExamCode = ""
+        var examTargetYear = 2026
         val updated = _exams.value.map { exam ->
             if (exam.id == examId) {
                 updatedExamCode = exam.shortCode
+                examTargetYear = exam.targetYear
                 exam.copy(
                     currentStatus = newStatus,
                     nextMilestoneTitle = newMilestone,
@@ -214,12 +216,13 @@ class EduAlertRepository(
         _exams.value = updated
 
         // Dispatch Webhook & Delta Sync Event to Next.js & React Native clients
-        val diffJson = """{"event": "deadline.extended", "examId": "$examId", "status": "${newStatus.name}", "milestone": "$newMilestone", "remainingHours": $remainingHours, "targetTimestamp": ${System.currentTimeMillis() + remainingHours * 3600_000L}}"""
+        val diffJson = """{"event": "deadline.extended", "examId": "$examId", "targetYear": $examTargetYear, "status": "${newStatus.name}", "milestone": "$newMilestone", "remainingHours": $remainingHours, "targetTimestamp": ${System.currentTimeMillis() + remainingHours * 3600_000L}}"""
         syncEngine.dispatchSyncEvent(
             eventType = SyncEventType.DEADLINE_EXTENDED,
             examShortCode = updatedExamCode.ifBlank { examId },
-            summary = "Deadline updated to '$newMilestone' (${remainingHours}h left). Pushed to Next.js & React Native clients.",
-            payloadDiffJson = diffJson
+            summary = "Deadline updated to '$newMilestone' (${remainingHours}h left, Cycle $examTargetYear). Pushed to Next.js & React Native clients.",
+            payloadDiffJson = diffJson,
+            targetYear = examTargetYear
         )
     }
 
@@ -237,7 +240,8 @@ class EduAlertRepository(
         ageLimits: String,
         attemptLimit: String,
         generalFee: String,
-        reservedFee: String
+        reservedFee: String,
+        targetYear: Int = 2026
     ) {
         var updatedCode = ""
         val updated = _exams.value.map { exam ->
@@ -262,19 +266,21 @@ class EduAlertRepository(
                     nextMilestoneTitle = newMilestone,
                     nextMilestoneTimestampMs = System.currentTimeMillis() + remainingHours * 3600_000L,
                     eligibilityDetails = updatedEligibility,
-                    fees = updatedFees
+                    fees = updatedFees,
+                    targetYear = targetYear
                 )
             } else exam
         }
         _exams.value = updated
 
-        // 1. Dispatch Webhook to Next.js and React Native
-        val payloadDiff = """{"event": "exam.full_update", "examId": "$examId", "name": "$fullName", "status": "${newStatus.name}", "milestone": "$newMilestone", "remainingHours": $remainingHours, "min12th": "$min12thPercentage", "fees": {"general": "$generalFee", "reserved": "$reservedFee"}}"""
+        // 1. Dispatch Webhook to Next.js and React Native with targetYear tag
+        val payloadDiff = """{"event": "exam.full_update", "examId": "$examId", "targetYear": $targetYear, "name": "$fullName", "status": "${newStatus.name}", "milestone": "$newMilestone", "remainingHours": $remainingHours, "min12th": "$min12thPercentage", "fees": {"general": "$generalFee", "reserved": "$reservedFee"}}"""
         syncEngine.dispatchSyncEvent(
             eventType = SyncEventType.EXAM_UPDATED,
             examShortCode = updatedCode.ifBlank { examId },
-            summary = "Admin CMS published full update for $updatedCode (Details, Deadlines & Eligibility).",
-            payloadDiffJson = payloadDiff
+            summary = "Admin CMS published full update for $updatedCode (Cycle $targetYear: Details, Deadlines & Eligibility).",
+            payloadDiffJson = payloadDiff,
+            targetYear = targetYear
         )
 
         // 2. Insert notification log for students
@@ -282,8 +288,8 @@ class EduAlertRepository(
             NotificationLogEntity(
                 examId = examId,
                 examShortCode = updatedCode.ifBlank { examId },
-                title = "⚡ Official Update: $updatedCode",
-                message = "Exam details, deadlines, and eligibility criteria were updated by the examination authority.",
+                title = "⚡ Official Update: $updatedCode ($targetYear)",
+                message = "Exam details, deadlines, and eligibility criteria for $targetYear were updated by the examination authority.",
                 channel = "Live Sync Broadcast",
                 isDreamExam = false,
                 timestampMs = System.currentTimeMillis(),
@@ -293,11 +299,12 @@ class EduAlertRepository(
     }
 
     suspend fun adminBroadcastAnnouncement(title: String, body: String, examShortCode: String = "ALL EXAMS") {
+        val activeSyncYear = syncEngine.syncState.value.syncTargetYear
         dao.insertNotification(
             NotificationLogEntity(
                 examId = "admin-broadcast",
                 examShortCode = examShortCode,
-                title = "📢 [Official Notice] $title",
+                title = "📢 [Official Notice $activeSyncYear] $title",
                 message = body,
                 channel = "NTA / Exam Authority Broadcast",
                 isDreamExam = true,
@@ -307,16 +314,20 @@ class EduAlertRepository(
         )
 
         // Dispatch emergency broadcast to Next.js and React Native endpoints
-        val payload = """{"event": "broadcast.emergency", "title": "$title", "body": "$body", "shortCode": "$examShortCode", "timestamp": ${System.currentTimeMillis()}}"""
+        val payload = """{"event": "broadcast.emergency", "title": "$title", "body": "$body", "shortCode": "$examShortCode", "targetYear": $activeSyncYear, "timestamp": ${System.currentTimeMillis()}}"""
         syncEngine.dispatchSyncEvent(
             eventType = SyncEventType.EMERGENCY_BROADCAST,
             examShortCode = examShortCode,
-            summary = "Emergency notice '$title' broadcasted across all channels.",
-            payloadDiffJson = payload
+            summary = "Emergency notice '$title' broadcasted across all channels (Cycle $activeSyncYear).",
+            payloadDiffJson = payload,
+            targetYear = activeSyncYear
         )
     }
 
     // Sync Controls & Diagnostics
+    fun setSyncTargetYear(year: Int) {
+        syncEngine.setSyncTargetYear(year)
+    }
     suspend fun forceManualSync(): Long {
         return syncEngine.forceManualSync()
     }

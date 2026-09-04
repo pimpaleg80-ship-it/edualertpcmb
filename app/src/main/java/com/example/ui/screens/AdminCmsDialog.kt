@@ -51,7 +51,8 @@ fun AdminCmsDialog(
         ageLimits: String,
         attemptLimit: String,
         generalFee: String,
-        reservedFee: String
+        reservedFee: String,
+        targetYear: Int
     ) -> Unit,
     onUpdateExamStatus: (examId: String, status: ExamStatus, milestone: String, remainingHours: Long) -> Unit,
     onBroadcastAnnouncement: (title: String, message: String, shortCode: String) -> Unit,
@@ -60,10 +61,14 @@ fun AdminCmsDialog(
     onToggleAdaptivePolling: (Boolean) -> Unit,
     onToggleWebhook: (String) -> Unit,
     onTestWebhookPing: (String) -> Unit,
+    onSetSyncTargetYear: (Int) -> Unit = {},
     onDismiss: () -> Unit
 ) {
     var selectedExamId by remember { mutableStateOf(exams.firstOrNull()?.id ?: "") }
     val currentExam = exams.find { it.id == selectedExamId } ?: exams.firstOrNull()
+
+    // Target Admission Year
+    var selectedTargetYear by remember(selectedExamId) { mutableStateOf(currentExam?.targetYear ?: 2026) }
 
     // Core Details
     var fullNameText by remember(selectedExamId) { mutableStateOf(currentExam?.fullName ?: "") }
@@ -293,6 +298,29 @@ fun AdminCmsDialog(
                             )
                             Spacer(modifier = Modifier.height(8.dp))
 
+                            // Target Admission Cycle / Year Selector
+                            Text(
+                                text = "Target Admission Year / Cycle",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                listOf(2025, 2026, 2027, 2028).forEach { year ->
+                                    FilterChip(
+                                        selected = selectedTargetYear == year,
+                                        onClick = { selectedTargetYear = year },
+                                        label = { Text("Cycle $year", fontWeight = if (selectedTargetYear == year) FontWeight.Bold else FontWeight.Normal) }
+                                    )
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.height(8.dp))
+
                             OutlinedTextField(
                                 value = fullNameText,
                                 onValueChange = { fullNameText = it },
@@ -439,7 +467,8 @@ fun AdminCmsDialog(
                                         ageLimitsText,
                                         attemptLimitText,
                                         generalFeeText,
-                                        reservedFeeText
+                                        reservedFeeText,
+                                        selectedTargetYear
                                     )
                                     onDismiss()
                                 },
@@ -552,7 +581,8 @@ fun AdminCmsDialog(
                                         ageLimitsText,
                                         attemptLimitText,
                                         generalFeeText,
-                                        reservedFeeText
+                                        reservedFeeText,
+                                        selectedTargetYear
                                     )
                                     onDismiss()
                                 },
@@ -578,6 +608,45 @@ fun AdminCmsDialog(
                                 fontSize = 11.sp,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
+
+                            Spacer(modifier = Modifier.height(10.dp))
+
+                            // Sync Target Year Control Card
+                            Card(
+                                shape = RoundedCornerShape(12.dp),
+                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f)),
+                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.35f)),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Column(modifier = Modifier.padding(12.dp)) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        Column {
+                                            Text("Active Sync Target Year", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                                            Text("Filters outgoing webhook pushes & delta polls to this year", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                        }
+                                        Badge(containerColor = MaterialTheme.colorScheme.primary) {
+                                            Text("Cycle ${syncState.syncTargetYear}", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                        }
+                                    }
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    Row(
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        listOf(2025, 2026, 2027, 2028).forEach { year ->
+                                            FilterChip(
+                                                selected = syncState.syncTargetYear == year,
+                                                onClick = { onSetSyncTargetYear(year) },
+                                                label = { Text("Cycle $year", fontSize = 11.sp, fontWeight = if (syncState.syncTargetYear == year) FontWeight.Bold else FontWeight.Normal) }
+                                            )
+                                        }
+                                    }
+                                }
+                            }
 
                             Spacer(modifier = Modifier.height(10.dp))
 
@@ -862,14 +931,29 @@ fun AdminCmsDialog(
                                     onClick = { codeSnippetTab = 1 },
                                     label = { Text("React Native (Sync Hook)") }
                                 )
+                                FilterChip(
+                                    selected = codeSnippetTab == 2,
+                                    onClick = { codeSnippetTab = 2 },
+                                    label = { Text("Inngest (edualert-pcmb)") }
+                                )
                             }
 
                             Spacer(modifier = Modifier.height(8.dp))
 
-                            val codeSnippet = if (codeSnippetTab == 0) {
-                                SyncEngine.getNextJsWebhookSnippet()
-                            } else {
-                                SyncEngine.getReactNativeSyncSnippet()
+                            val codeSnippet = when (codeSnippetTab) {
+                                0 -> SyncEngine.getNextJsWebhookSnippet(syncState.syncTargetYear)
+                                1 -> SyncEngine.getReactNativeSyncSnippet(syncState.syncTargetYear)
+                                else -> SyncEngine.getInngestIntegrationSnippet(syncState.syncTargetYear)
+                            }
+                            val snippetPath = when (codeSnippetTab) {
+                                0 -> "app/api/webhooks/edualert/route.ts"
+                                1 -> "hooks/useEduAlertSync.ts"
+                                else -> "src/lib/inngest/client.ts & functions.ts"
+                            }
+                            val snippetBadge = when (codeSnippetTab) {
+                                0 -> "HMAC Verified"
+                                1 -> "WebSocket + Delta"
+                                else -> "Inngest Orchestration"
                             }
 
                             Card(
@@ -884,13 +968,13 @@ fun AdminCmsDialog(
                                         modifier = Modifier.fillMaxWidth()
                                     ) {
                                         Text(
-                                            text = if (codeSnippetTab == 0) "app/api/webhooks/edualert/route.ts" else "hooks/useEduAlertSync.ts",
+                                            text = snippetPath,
                                             fontFamily = FontFamily.Monospace,
                                             color = Color(0xFF94A3B8),
                                             fontSize = 10.sp
                                         )
                                         Text(
-                                            text = "HMAC Verified",
+                                            text = snippetBadge,
                                             color = Color(0xFF38BDF8),
                                             fontSize = 10.sp,
                                             fontWeight = FontWeight.Bold

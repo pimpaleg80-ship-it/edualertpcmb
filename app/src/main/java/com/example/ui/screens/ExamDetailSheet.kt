@@ -74,6 +74,9 @@ fun ExamDetailSheet(
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     CategoryPill(category = exam.category)
+                    Badge(containerColor = MaterialTheme.colorScheme.tertiaryContainer) {
+                        Text("Cycle ${exam.targetYear}", color = MaterialTheme.colorScheme.onTertiaryContainer, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    }
                     StatusPill(status = exam.currentStatus)
                 }
 

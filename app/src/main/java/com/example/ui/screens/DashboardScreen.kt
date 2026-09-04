@@ -42,10 +42,13 @@ fun DashboardScreen(
     searchQuery: String,
     selectedCategory: ExamCategory?,
     selectedFilterChip: ExamFilterChip,
+    selectedYearFilter: Int? = null,
     currentTimeMs: Long,
     onSearchQueryChange: (String) -> Unit,
     onSelectCategory: (ExamCategory?) -> Unit,
     onSelectFilterChip: (ExamFilterChip) -> Unit,
+    onSelectYearFilter: (Int?) -> Unit = {},
+    onUpdateTargetYearPreference: (Int) -> Unit = {},
     onToggleFollow: (String) -> Unit,
     onToggleDream: (ExamItem) -> Unit,
     onOpenDetails: (ExamItem) -> Unit,
@@ -57,7 +60,10 @@ fun DashboardScreen(
     val followedList = userPreference.followedExamIds.split(",").filter { it.isNotBlank() }
     val dreamList = userPreference.dreamExamIds.split(",").filter { it.isNotBlank() }
 
-    // Filter exams based on search, category, and filter chips
+    // Target year to filter by: if explicitly selected, use that; otherwise if null, show all or match userPreference
+    val activeYearFilter = selectedYearFilter
+
+    // Filter exams based on search, category, target year, and filter chips
     val filteredExams = exams.filter { exam ->
         val matchesSearch = searchQuery.isBlank() ||
                 exam.fullName.contains(searchQuery, ignoreCase = true) ||
@@ -67,6 +73,8 @@ fun DashboardScreen(
 
         val matchesCategory = selectedCategory == null || exam.category == selectedCategory
 
+        val matchesYear = activeYearFilter == null || exam.targetYear == activeYearFilter
+
         val matchesChip = when (selectedFilterChip) {
             ExamFilterChip.ALL -> true
             ExamFilterChip.FOLLOWED_ONLY -> followedList.contains(exam.id)
@@ -75,7 +83,7 @@ fun DashboardScreen(
             ExamFilterChip.LAST_48_HOURS -> exam.currentStatus == ExamStatus.LAST_48_HOURS
         }
 
-        matchesSearch && matchesCategory && matchesChip
+        matchesSearch && matchesCategory && matchesYear && matchesChip
     }
 
     // Check if any followed or dream exams are in Last 48 Hours or Admit Card Live
@@ -144,6 +152,43 @@ fun DashboardScreen(
                     }
                 }
 
+                // Target Admission Cycle & Synchronization Scope Banner
+                Card(
+                    shape = RoundedCornerShape(10.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f)),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.35f)),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 8.dp)
+                ) {
+                    Column(modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    imageVector = Icons.Default.Event,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(15.dp)
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    text = "Target Admission Year: Cycle ${userPreference.targetYear}",
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                                )
+                            }
+                            Badge(containerColor = MaterialTheme.colorScheme.primary) {
+                                Text("Sync: ${syncState.syncTargetYear}", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                            }
+                        }
+                    }
+                }
+
                 // Real-Time Data Synchronization Status Banner
                 Card(
                     shape = RoundedCornerShape(10.dp),
@@ -151,7 +196,7 @@ fun DashboardScreen(
                     border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(top = 8.dp)
+                        .padding(top = 6.dp)
                 ) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
@@ -325,6 +370,37 @@ fun DashboardScreen(
                     isSelected = selectedFilterChip == ExamFilterChip.LAST_48_HOURS,
                     onClick = { onSelectFilterChip(ExamFilterChip.LAST_48_HOURS) }
                 )
+            }
+        }
+
+        // Target Year Filter Chips Row
+        item {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Admission Year:",
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                SubFilterPill(
+                    label = "All Years",
+                    isSelected = selectedYearFilter == null,
+                    onClick = { onSelectYearFilter(null) }
+                )
+                listOf(2025, 2026, 2027, 2028).forEach { year ->
+                    val isMyPref = userPreference.targetYear == year
+                    SubFilterPill(
+                        label = if (isMyPref) "Cycle $year (My Target)" else "Cycle $year",
+                        isSelected = selectedYearFilter == year,
+                        onClick = { onSelectYearFilter(year) }
+                    )
+                }
             }
         }
 

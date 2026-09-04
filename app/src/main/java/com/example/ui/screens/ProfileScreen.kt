@@ -29,10 +29,12 @@ fun ProfileScreen(
     onUpdateStream: (String) -> Unit,
     onUpdateHomeState: (String) -> Unit,
     onUpdatePathway: (String) -> Unit,
+    onUpdateTargetYear: (Int) -> Unit = {},
     onOpenAdminCms: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val streamOptions = listOf("PCM", "PCB", "PCMB")
+    val targetYearOptions = listOf(2025, 2026, 2027, 2028)
     val stateOptions = listOf(
         "Maharashtra", "Karnataka", "West Bengal", "Telangana",
         "Andhra Pradesh", "Kerala", "Gujarat", "Odisha", "Bihar", "Delhi NCR", "Tamil Nadu", "Rajasthan"
@@ -137,6 +139,70 @@ fun ProfileScreen(
                                 ) {
                                     Text(
                                         text = stream,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 13.sp
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Section 1B: Target Admission Year / Exam Cycle
+        item {
+            Card(
+                shape = RoundedCornerShape(14.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column {
+                            Text(
+                                text = "Target Admission Year / Cycle",
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                text = "Aligns deadlines, notifications & data synchronization",
+                                fontSize = 11.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        Badge(containerColor = MaterialTheme.colorScheme.primary) {
+                            Text("Active: ${userPreference.targetYear}", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        targetYearOptions.forEach { year ->
+                            val isSelected = userPreference.targetYear == year
+                            Surface(
+                                shape = RoundedCornerShape(8.dp),
+                                color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
+                                contentColor = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clickable { onUpdateTargetYear(year) }
+                            ) {
+                                Box(
+                                    contentAlignment = Alignment.Center,
+                                    modifier = Modifier.padding(vertical = 10.dp)
+                                ) {
+                                    Text(
+                                        text = "$year",
                                         fontWeight = FontWeight.Bold,
                                         fontSize = 13.sp
                                     )

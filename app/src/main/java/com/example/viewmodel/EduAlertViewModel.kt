@@ -30,6 +30,7 @@ data class EduAlertUiState(
     val searchQuery: String = "",
     val selectedCategory: ExamCategory? = null, // null = All categories
     val selectedFilterChip: ExamFilterChip = ExamFilterChip.ALL,
+    val selectedYearFilter: Int? = null, // null = User's targetYear preference or all
     val selectedExamForDetails: ExamItem? = null,
     val isAdminCmsOpen: Boolean = false,
     val snackbarMessage: String? = null,
@@ -91,6 +92,18 @@ class EduAlertViewModel(application: Application) : AndroidViewModel(application
 
     fun selectFilterChip(filter: ExamFilterChip) {
         _uiState.update { it.copy(selectedFilterChip = filter) }
+    }
+
+    fun selectYearFilter(year: Int?) {
+        _uiState.update { it.copy(selectedYearFilter = year) }
+    }
+
+    fun updateTargetYear(year: Int) {
+        viewModelScope.launch {
+            repository.savePreferences(userPreference.value.copy(targetYear = year))
+            repository.setSyncTargetYear(year)
+            showMessage("Target Admission Cycle set to $year. Sync & notifications aligned.")
+        }
     }
 
     fun openExamDetails(exam: ExamItem?) {
@@ -249,7 +262,8 @@ class EduAlertViewModel(application: Application) : AndroidViewModel(application
         ageLimits: String,
         attemptLimit: String,
         generalFee: String,
-        reservedFee: String
+        reservedFee: String,
+        targetYear: Int = 2026
     ) {
         viewModelScope.launch {
             repository.adminUpdateFullExam(
@@ -266,10 +280,16 @@ class EduAlertViewModel(application: Application) : AndroidViewModel(application
                 ageLimits = ageLimits,
                 attemptLimit = attemptLimit,
                 generalFee = generalFee,
-                reservedFee = reservedFee
+                reservedFee = reservedFee,
+                targetYear = targetYear
             )
-            showMessage("Published! Details, deadlines & eligibility pushed to clients.")
+            showMessage("Published! Details, deadlines & eligibility for $targetYear pushed to clients.")
         }
+    }
+
+    fun setSyncTargetYear(year: Int) {
+        repository.setSyncTargetYear(year)
+        showMessage("Sync Target Year switched to $year")
     }
 
     fun adminBroadcast(title: String, body: String, examShortCode: String) {

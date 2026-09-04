@@ -2,5 +2,7 @@
   "name": "EduAlert PCMB",
   "description": "Competitive exam registration, deadline, and admit card tracker for Indian PCMB students.",
   "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
 }

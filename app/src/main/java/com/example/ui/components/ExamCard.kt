@@ -78,6 +78,15 @@ fun ExamCard(
                     modifier = Modifier.weight(1f, fill = false)
                 ) {
                     CategoryPill(category = exam.category)
+                    Text(
+                        text = "${exam.targetYear}",
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.tertiary,
+                        modifier = Modifier
+                            .background(MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.6f), RoundedCornerShape(4.dp))
+                            .padding(horizontal = 5.dp, vertical = 2.dp)
+                    )
                     if (exam.stateDomicile != null) {
                         Text(
                             text = exam.stateDomicile,

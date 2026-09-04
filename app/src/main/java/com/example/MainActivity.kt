@@ -130,10 +130,13 @@ fun EduAlertApp(viewModel: EduAlertViewModel) {
                 searchQuery = uiState.searchQuery,
                 selectedCategory = uiState.selectedCategory,
                 selectedFilterChip = uiState.selectedFilterChip,
+                selectedYearFilter = uiState.selectedYearFilter,
                 currentTimeMs = uiState.currentTimeMs,
                 onSearchQueryChange = { viewModel.setSearchQuery(it) },
                 onSelectCategory = { viewModel.selectCategory(it) },
                 onSelectFilterChip = { viewModel.selectFilterChip(it) },
+                onSelectYearFilter = { viewModel.selectYearFilter(it) },
+                onUpdateTargetYearPreference = { viewModel.updateTargetYear(it) },
                 onToggleFollow = { viewModel.toggleFollowExam(it) },
                 onToggleDream = { viewModel.toggleDreamExam(it) },
                 onOpenDetails = { viewModel.openExamDetails(it) },
@@ -172,6 +175,7 @@ fun EduAlertApp(viewModel: EduAlertViewModel) {
                 onUpdateStream = { viewModel.updateStream(it) },
                 onUpdateHomeState = { viewModel.updateHomeState(it) },
                 onUpdatePathway = { viewModel.updateCareerPathway(it) },
+                onUpdateTargetYear = { viewModel.updateTargetYear(it) },
                 onOpenAdminCms = { viewModel.toggleAdminCms(true) },
                 modifier = Modifier.padding(innerPadding)
             )
@@ -202,7 +206,7 @@ fun EduAlertApp(viewModel: EduAlertViewModel) {
             AdminCmsDialog(
                 exams = exams,
                 syncState = syncState,
-                onUpdateFullExam = { id, name, body, web, appUrl, status, milestone, hrs, min12, comp, age, att, genFee, resFee ->
+                onUpdateFullExam = { id, name, body, web, appUrl, status, milestone, hrs, min12, comp, age, att, genFee, resFee, yr ->
                     viewModel.adminUpdateFullExam(
                         examId = id,
                         fullName = name,
@@ -217,7 +221,8 @@ fun EduAlertApp(viewModel: EduAlertViewModel) {
                         ageLimits = age,
                         attemptLimit = att,
                         generalFee = genFee,
-                        reservedFee = resFee
+                        reservedFee = resFee,
+                        targetYear = yr
                     )
                 },
                 onUpdateExamStatus = { examId, status, milestone, hrs ->
@@ -231,6 +236,7 @@ fun EduAlertApp(viewModel: EduAlertViewModel) {
                 onToggleAdaptivePolling = { viewModel.toggleAdaptivePolling(it) },
                 onToggleWebhook = { viewModel.toggleWebhook(it) },
                 onTestWebhookPing = { viewModel.testWebhookPing(it) },
+                onSetSyncTargetYear = { viewModel.setSyncTargetYear(it) },
                 onDismiss = { viewModel.toggleAdminCms(false) }
             )
         }

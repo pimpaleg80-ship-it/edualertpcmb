@@ -13,7 +13,8 @@ data class UserPreferenceEntity(
     val dreamExamIds: String = "jee-main-2026,bitsat-2026", // max 3
     val pushEnabled: Boolean = true,
     val whatsappEnabled: Boolean = false,
-    val dndBypassDreamExams: Boolean = true
+    val dndBypassDreamExams: Boolean = true,
+    val targetYear: Int = 2026
 )
 
 @Entity(tableName = "user_applications")
